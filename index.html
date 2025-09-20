@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodePen AutoSave Debugger</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --danger: #e74c3c;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --dark: #2c3e50;
+            --light: #ecf0f1;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        header {
+            background: var(--dark);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .card.error {
+            border-left-color: var(--danger);
+        }
+        
+        .card.success {
+            border-left-color: var(--success);
+        }
+        
+        .card.warning {
+            border-left-color: var(--warning);
+        }
+        
+        .card h2 {
+            color: var(--dark);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .status-online {
+            background: var(--success);
+        }
+        
+        .status-offline {
+            background: var(--danger);
+        }
+        
+        .status-warning {
+            background: var(--warning);
+        }
+        
+        .log-output {
+            background: var(--dark);
+            color: #00ff00;
+            font-family: monospace;
+            padding: 15px;
+            border-radius: 5px;
+            height: 200px;
+            overflow-y: auto;
+            margin-top: 15px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+            margin-top: 15px;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .btn-success {
+            background: var(--success);
+        }
+        
+        .btn-success:hover {
+            background: #27ae60;
+        }
+        
+        .code-editor {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        
+        .code-editor textarea {
+            width: 100%;
+            height: 100px;
+            background: #1a2530;
+            color: #00ff00;
+            border: 1px solid #4a5568;
+            padding: 10px;
+            font-family: monospace;
+            border-radius: 4px;
+            resize: vertical;
+        }
+        
+        .editor-tabs {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        
+        .editor-tab {
+            padding: 8px 15px;
+            background: #4a5568;
+            color: white;
+            cursor: pointer;
+            border-radius: 4px 4px 0 0;
+            margin-right: 5px;
+        }
+        
+        .editor-tab.active {
+            background: #2d3748;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: var(--light);
+            color: #7f8c8d;
+        }
+        
+        .console-repetition {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .code-snippet {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            overflow-x: auto;
+            border-left: 3px solid var(--primary);
+        }
+        
+        .fix-explanation {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 3px solid var(--warning);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CodePen AutoSave Debugger</h1>
+            <p class="subtitle">Fixing the useAutoSave Hook Issue</p>
+        </header>
+        
+        <div class="dashboard">
+            <div class="card">
+                <h2><span class="status-indicator status-online"></span> Original useAutoSave Hook</h2>
+                <p>Your current implementation has an issue:</p>
+                <div class="code-snippet">
+                    const useAutoSave = (code, projectId, updateProject) => {<br>
+                    &nbsp;&nbsp;const prevCodeRef = useRef(code);<br><br>
+                    &nbsp;&nbsp;const debouncedSave = useMemo(<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;() => debounce(async (newCode, pid) => {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;try {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// Only save if something changed<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newCode.html !== prevCodeRef.current.html ||<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newCode.css !== prevCodeRef.current.css ||<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newCode.js !== prevCodeRef.current.js<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;) {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;await updateProject(pid, newCode);<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;prevCodeRef.current = newCode;<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;console.log("Changes saved automatically", newCode);<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;} catch (error) {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;console.error("Auto-save failed:", error);<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;}, 2000),<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;[updateProject]<br>
+                    &nbsp;&nbsp;);<br><br>
+                    &nbsp;&nbsp;useEffect(() => {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;prevCodeRef.current = code; // &lt;-- THIS IS THE PROBLEM<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;if (!projectId) return;<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;debouncedSave(code, projectId);<br><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;return () => {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;debouncedSave.cancel();<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;};<br>
+                    &nbsp;&nbsp;}, [code, projectId, debouncedSave]);<br>
+                    };
+                </div>
+            </div>
+            
+            <div class="card success">
+                <h2><span class="status-indicator status-success"></span> Fixed useAutoSave Hook</h2>
+                <p>Here's the corrected implementation:</p>
+                <div class="code-snippet">
+                    const useAutoSave = (code, projectId, updateProject) => {<br>
+                    &nbsp;&nbsp;const prevCodeRef = useRef(code);<br><br>
+                    &nbsp;&nbsp;const debouncedSave = useMemo(<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;() => debounce(async (newCode, pid) => {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;try {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// Only save if something changed<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newCode.html !== prevCodeRef.current.html ||<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newCode.css !== prevCodeRef.current.css ||<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newCode.js !== prevCodeRef.current.js<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;) {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;await updateProject(pid, newCode);<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;prevCodeRef.current = newCode; // Update AFTER successful save<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;console.log("Changes saved automatically", newCode);<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;} catch (error) {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;console.error("Auto-save failed:", error);<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;}, 2000),<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;[updateProject]<br>
+                    &nbsp;&nbsp;);<br><br>
+                    &nbsp;&nbsp;useEffect(() => {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;if (!projectId) return;<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;debouncedSave(code, projectId);<br><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;return () => {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;debouncedSave.cancel();<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;};<br>
+                    &nbsp;&nbsp;}, [code, projectId, debouncedSave]);<br>
+                    };
+                </div>
+                <div class="fix-explanation">
+                    <h3>What was fixed:</h3>
+                    <p>Removed the line <code>prevCodeRef.current = code;</code> from the useEffect. This was causing the reference to update immediately, making the comparison always fail.</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2><span class="status-indicator status-warning"></span> Test the Fix</h2>
+                <p>Try the code editor below to simulate the autosave behavior:</p>
+                
+                <div class="editor-tabs">
+                    <div class="editor-tab active">HTML</div>
+                    <div class="editor-tab">CSS</div>
+                    <div class="editor-tab">JS</div>
+                </div>
+                
+                <div class="code-editor">
+                    <textarea id="html-code" placeholder="Enter HTML code"></textarea>
+                </div>
+                
+                <button class="btn" id="simulate-change">Simulate Code Change</button>
+                <button class="btn btn-success" id="test-save">Test Save Operation</button>
+                
+                <div class="log-output" id="test-log">
+                    > Test log will appear here
+                    > Ready to test the autosave functionality
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2><span class="status-indicator status-online"></span> Console Repetition Fix</h2>
+                <p>For the console repetition issue, check your PreviewFrame component:</p>
+                
+                <div class="code-snippet">
+                    // In your PreviewFrame component, ensure you clean up<br>
+                    // event listeners properly:<br><br>
+                    useEffect(() => {<br>
+                    &nbsp;&nbsp;const handleMessage = (event) => {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;// Handle console messages<br>
+                    &nbsp;&nbsp;};<br><br>
+                    &nbsp;&nbsp;window.addEventListener('message', handleMessage);<br><br>
+                    &nbsp;&nbsp;return () => {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;window.removeEventListener('message', handleMessage);<br>
+                    &nbsp;&nbsp;};<br>
+                    }, []); // Empty dependency array ensures this runs once
+                </div>
+                
+                <div class="fix-explanation">
+                    <h3>Console Repetition Cause:</h3>
+                    <p>The console repetition is likely caused by event listeners being attached multiple times without proper cleanup. Each time your component re-renders, a new event listener is added, causing multiple executions.</p>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>CodePen Debugger • bilalsi.com • AutoSave Fix</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const simulateChangeBtn = document.getElementById('simulate-change');
+            const testSaveBtn = document.getElementById('test-save');
+            const testLog = document.getElementById('test-log');
+            const htmlCode = document.getElementById('html-code');
+            
+            // Mock updateProject function
+            const mockUpdateProject = async (projectId, code) => {
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        testLog.innerHTML += `\n> Project ${projectId} saved successfully`;
+                        testLog.innerHTML += `\n> HTML: ${code.html ? code.html.substring(0, 30) + '...' : 'Empty'}`;
+                        testLog.innerHTML += `\n> CSS: ${code.css ? code.css.substring(0, 30) + '...' : 'Empty'}`;
+                        testLog.innerHTML += `\n> JS: ${code.js ? code.js.substring(0, 30) + '...' : 'Empty'}`;
+                        testLog.scrollTop = testLog.scrollHeight;
+                        resolve();
+                    }, 1000);
+                });
+            };
+            
+            // Mock useAutoSave implementation (fixed version)
+            const useAutoSave = (code, projectId, updateProject) => {
+                let prevCode = {...code};
+                
+                const debouncedSave = async (newCode, pid) => {
+                    try {
+                        // Only save if something changed
+                        if (
+                            newCode.html !== prevCode.html ||
+                            newCode.css !== prevCode.css ||
+                            newCode.js !== prevCode.js
+                        ) {
+                            testLog.innerHTML += `\n> Changes detected, saving...`;
+                            testLog.scrollTop = testLog.scrollHeight;
+                            
+                            await updateProject(pid, newCode);
+                            prevCode = {...newCode};
+                            testLog.innerHTML += `\n> Changes saved automatically`;
+                            testLog.scrollTop = testLog.scrollHeight;
+                        } else {
+                            testLog.innerHTML += `\n> No changes detected, skipping save`;
+                            testLog.scrollTop = testLog.scrollHeight;
+                        }
+                    } catch (error) {
+                        testLog.innerHTML += `\n> Auto-save failed: ${error}`;
+                        testLog.scrollTop = testLog.scrollHeight;
+                    }
+                };
+                
+                return {
+                    save: debouncedSave
+                };
+            };
+            
+            // Initialize autosave
+            const autosave = useAutoSave({
+                html: '',
+                css: '',
+                js: ''
+            }, 'test-project', mockUpdateProject);
+            
+            simulateChangeBtn.addEventListener('click', function() {
+                const newHtml = htmlCode.value || '<div>New content</div>';
+                testLog.innerHTML += `\n> Simulating code change...`;
+                testLog.scrollTop = testLog.scrollHeight;
+                
+                // Simulate autosave
+                autosave.save({
+                    html: newHtml,
+                    css: 'body { color: red; }',
+                    js: 'console.log("test");'
+                }, 'test-project');
+            });
+            
+            testSaveBtn.addEventListener('click', function() {
+                testLog.innerHTML += `\n> Testing save operation...`;
+                testLog.scrollTop = testLog.scrollHeight;
+                
+                autosave.save({
+                    html: htmlCode.value || '<div>Test content</div>',
+                    css: 'body { background: white; }',
+                    js: 'console.log("Hello World");'
+                }, 'test-project');
+            });
+        });
+    </script>
+</body>
+</html>

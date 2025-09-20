@@ -25,7 +25,8 @@ const projectSchema = new mongoose.Schema({
   },
   tags: [{
     type: String,
-    trim: true
+    trim: true,
+    maxlength: 30
   }],
   owner: {
     type: mongoose.Schema.Types.ObjectId,
@@ -42,8 +43,14 @@ const projectSchema = new mongoose.Schema({
   }],
   forkOf: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Project'
+    ref: 'Project',
+    index: true
   },
+  forkCount: {
+    type: Number,
+    default: 0
+  }
+  ,
   views: {
     type: Number,
     default: 0
@@ -58,6 +65,7 @@ const projectSchema = new mongoose.Schema({
 
 // Index for better performance
 projectSchema.index({ owner: 1, createdAt: -1 });
+projectSchema.index({ owner: 1, title: 1 }, { unique: true });
 projectSchema.index({ isPublic: 1, createdAt: -1 });
 projectSchema.index({ tags: 1 });
 

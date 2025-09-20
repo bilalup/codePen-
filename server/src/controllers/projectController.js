@@ -89,21 +89,13 @@ const createProject = async (req, res) => {
 // Update project
 const updateProject = async (req, res) => {
   try {
+    console.log("Incoming update:", req.body); // <-- add this
+
     let project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
 
-    if (!project) {
-      return res.status(404).json({
-        success: false,
-        error: 'Project not found'
-      });
-    }
-
-    // Check ownership
     if (project.owner.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        error: 'Not authorized to update this project'
-      });
+      return res.status(403).json({ success: false, error: 'Not authorized to update this project' });
     }
 
     project = await Project.findByIdAndUpdate(
@@ -112,17 +104,13 @@ const updateProject = async (req, res) => {
       { new: true, runValidators: true }
     ).populate('owner', 'username avatar');
 
-    res.json({
-      success: true,
-      data: project
-    });
+    res.json({ success: true, data: project });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    console.error(error);
+    res.status(500).json({ success: false, error: error.message });
   }
 };
+
 
 // Delete project
 const deleteProject = async (req, res) => {

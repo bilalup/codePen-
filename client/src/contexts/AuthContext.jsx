@@ -2,7 +2,6 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
 
 const AuthContext = createContext();
-
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -31,6 +30,7 @@ export const AuthProvider = ({ children }) => {
       const response = await api.get('/auth/me');
       setUser(response.data.data.user);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
+      // eslint-disable-next-line no-unused-vars
     } catch (error) {
       logout();
     }
@@ -54,23 +54,26 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (userData) => {
-    try {
-      const response = await api.post('/auth/register', userData);
-      const { user, token } = response.data.data;
+  // In src/contexts/AuthContext.jsx, replace the register function with:
+const register = async (userData) => {
+  try {
+    console.log('Attempting registration with:', userData);
+    const response = await api.post('/auth/register', userData);
+    const { user, token } = response.data.data;
 
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      setUser(user);
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    setUser(user);
 
-      return { success: true };
-    } catch (error) {
-      return { 
-        success: false, 
-        error: error.response?.data?.error || 'Registration failed' 
-      };
-    }
-  };
+    return { success: true };
+  } catch (error) {
+    console.error('Registration failed:', error.response?.data);
+    return { 
+      success: false, 
+      error: error.response?.data?.error || 'Registration failed. Please try again.' 
+    };
+  }
+};
 
   const logout = () => {
     localStorage.removeItem('token');
